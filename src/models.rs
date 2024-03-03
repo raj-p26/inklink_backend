@@ -37,3 +37,14 @@ pub struct SavedUser {
     pub last_name: String,
     pub email: String
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateUser {
+    pub id: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub username: String,
+    pub password: String,
+    pub email: String,
+    pub about: String
+}

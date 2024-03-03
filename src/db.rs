@@ -4,7 +4,7 @@ use std::env;
 use sqlx::{ Pool, Postgres, Result };
 use sqlx::postgres::PgQueryResult;
 
-use crate::models::{InsertUser, LoginUser, SavedUser, User};
+use crate::models::{InsertUser, LoginUser, SavedUser, UpdateUser, User};
 
 pub async fn fetch_all_users() -> Result<Vec<User>, sqlx::Error> {
     let conn_pool = establish_connection().await;
@@ -77,6 +77,19 @@ pub async fn get_user_info_by_credentials(login_user: LoginUser) -> Option<Saved
     return None;
 }
 
+pub async fn update_user(user: UpdateUser) -> Result<PgQueryResult> {
+    let pool = establish_connection().await;
+    sqlx::query!(r#"
+        UPDATE users
+        SET first_name=$1, last_name=$2, email=$3,
+        username=$4, about=$5, password=$6
+        WHERE id=$7;
+        "#, user.first_name, user.last_name,
+        user.email, user.username, user.about,user.password, user.id)
+        .execute(&pool)
+        .await
+}
+
 async fn get_password_from_db(email: &str, pool: &Pool<Postgres>) -> String {
     let row = sqlx::query!(
         "SELECT password FROM users WHERE email=$1;", email)
@@ -85,6 +98,29 @@ async fn get_password_from_db(email: &str, pool: &Pool<Postgres>) -> String {
         .expect("Error decoding");
 
     row.password
+}
+
+#[allow(dead_code)]
+pub async fn update_account_status(email: &str, status: &str) -> Result<PgQueryResult> {
+    let pool = establish_connection().await;
+    sqlx::query!("UPDATE users SET account_status=$1 WHERE email=$2;", status, email)
+        .execute(&pool)
+        .await
+}
+
+pub async fn update_last_login_date(email: &str) -> Result<PgQueryResult> {
+    let pool = establish_connection().await;
+    sqlx::query!("UPDATE users SET last_login_date=now() WHERE email=$1;", email)
+        .execute(&pool)
+        .await
+}
+
+#[allow(dead_code)]
+pub async fn delete_user(email: &str) -> Result<PgQueryResult> {
+    let pool = establish_connection().await;
+    sqlx::query!("DELETE FROM users WHERE email=$1;", email)
+        .execute(&pool)
+        .await
 }
 
 fn hash_password(password: String) -> String {

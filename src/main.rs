@@ -1,10 +1,14 @@
-use actix_web::{ get, middleware::Logger, post, web, App, HttpResponse, HttpServer, Responder };
+use actix_web::{
+    get, middleware::Logger, post,
+    web, App, HttpResponse, HttpServer,
+    Responder, put
+};
 use serde_json::json;
 
 mod models;
 mod db;
 
-use models::{ InsertUser, LoginUser };
+use models::{ InsertUser, LoginUser, UpdateUser };
 
 #[get("/")]
 async fn root_handler() -> impl Responder {
@@ -39,10 +43,27 @@ async fn new_user_handler(data: web::Json<InsertUser>) -> impl Responder {
     }
 }
 
+#[put("/users/update")]
+async fn update_user_handler(data: web::Json<UpdateUser>) -> impl Responder {
+    match db::update_user(data.into_inner()).await {
+        Ok(_) => HttpResponse::Ok().json(json!({ "status": "ok" })),
+        Err(e) => {
+            HttpResponse::Conflict()
+                .json(json!({
+                    "status": "failed",
+                    "message": e.to_string()
+                }))
+        }
+    }
+}
+
 #[post("/users/login")]
 async fn login_user_handler(data: web::Json<LoginUser>) -> impl Responder {
     match db::get_user_info_by_credentials(data.into_inner()).await {
         Some(user) => {
+            db::update_last_login_date(&user.email)
+                .await
+                .unwrap();
             HttpResponse::Ok()
                 .json(json!({
                     "status": "ok",
@@ -73,6 +94,7 @@ async fn main() -> std::io::Result<()> {
             .service(root_handler)
             .service(new_user_handler)
             .service(login_user_handler)
+            .service(update_user_handler)
             .wrap(Logger::default())
     })
     .bind("192.168.102.215:4000")?
