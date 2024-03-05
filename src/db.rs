@@ -11,14 +11,16 @@ pub async fn fetch_all_users() -> Result<Vec<User>, sqlx::Error> {
 
     sqlx::query_as!(
         User,
-        r#"SELECT first_name, last_name, username, email,
+        r#"
+        SELECT first_name, last_name, username, email,
             about, account_status, registration_date,
-            last_login_date FROM users;"#)
+            last_login_date FROM users;
+            "#)
         .fetch_all(&conn_pool)
         .await
 }
 
-pub async fn insert_user(user: InsertUser) -> Result<PgQueryResult, String> {
+pub async fn insert_user(user: InsertUser) -> Result<SavedUser, String> {
     let pool = establish_connection().await;
 
     if is_email_taken(&pool, &user.email).await {
@@ -27,13 +29,14 @@ pub async fn insert_user(user: InsertUser) -> Result<PgQueryResult, String> {
 
     let user_id = Uuid::new_v4().hyphenated().to_string();
 
-    let res = sqlx::query!(r#"
-        INSERT INTO users (id, first_name, last_name, username, email, password,
-        about) VALUES ($1, $2, $3, $4, $5, $6, $7);
-        "#, user_id, user.first_name,
+    let res = sqlx::query_as!(SavedUser, r#"
+        INSERT INTO users (id, first_name, last_name, username, email,
+        password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING
+        id, first_name, last_name, email; "#,
+        user_id, user.first_name,
         user.last_name, user.username,
-        user.email, hash_password(user.password), user.about)
-        .execute(&pool)
+        user.email, hash_password(user.password))
+        .fetch_one(&pool)
         .await;
     pool.close().await;
 

@@ -32,8 +32,15 @@ async fn root_handler() -> impl Responder {
 #[post("/users/signup")]
 async fn new_user_handler(data: web::Json<InsertUser>) -> impl Responder {
     match db::insert_user(data.into_inner()).await {
-        Ok(_) => HttpResponse::Ok().json(json!({ "status": "ok" })),
+        Ok(user) => {
+            HttpResponse::Ok()
+                .json(json!({
+                    "status": "ok",
+                    "user": user,
+                }))
+        },
         Err(e) => {
+            println!("{:?}", &e);
             HttpResponse::Conflict()
                 .json(json!({
                     "status": "failed",

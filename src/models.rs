@@ -21,7 +21,6 @@ pub struct InsertUser {
     pub username: String,
     pub email: String,
     pub password: String,
-    pub about: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
