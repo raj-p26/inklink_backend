@@ -12,7 +12,7 @@ pub async fn fetch_all_users() -> Result<Vec<User>, sqlx::Error> {
     sqlx::query_as!(
         User,
         r#"
-        SELECT first_name, last_name, username, email,
+        SELECT id, first_name, last_name, username, email,
             about, account_status, registration_date,
             last_login_date FROM users;
             "#)
@@ -32,7 +32,7 @@ pub async fn insert_user(user: InsertUser) -> Result<SavedUser, String> {
     let res = sqlx::query_as!(SavedUser, r#"
         INSERT INTO users (id, first_name, last_name, username, email,
         password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING
-        id, first_name, last_name, email; "#,
+        id, username, email; "#,
         user_id, user.first_name,
         user.last_name, user.username,
         user.email, hash_password(user.password))
@@ -57,11 +57,25 @@ async fn is_email_taken(pool: &Pool<Postgres>, email: &str) -> bool {
         .unwrap_or(false)
 }
 
+pub async fn get_user_by_id(user_id: String) -> Option<User> {
+    let pool = establish_connection().await;
+
+    sqlx::query_as!(
+        User,
+        r#"SELECT id, first_name, last_name, username, email,
+        about, account_status, registration_date,
+        last_login_date FROM users WHERE id=$1;"#,
+        user_id)
+        .fetch_optional(&pool)
+        .await
+        .expect("Error fetching record")
+}
+
 pub async fn get_user_info_by_credentials(login_user: LoginUser) -> Option<SavedUser> {
     let pool = establish_connection().await;
     let res = sqlx::query_as!(
         SavedUser,
-        r#"SELECT id, first_name, last_name, email
+        r#"SELECT id, username, email
         FROM users WHERE email=$1;"#,
         login_user.email)
         .fetch_optional(&pool)

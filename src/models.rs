@@ -4,6 +4,7 @@ use chrono::NaiveDateTime;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct User {
+    pub id: String,
     pub first_name: String,
     pub last_name: String,
     pub username: String,
@@ -32,8 +33,7 @@ pub struct LoginUser {
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct SavedUser {
     pub id: String,
-    pub first_name: String,
-    pub last_name: String,
+    pub username: String,
     pub email: String
 }
 
@@ -46,4 +46,39 @@ pub struct UpdateUser {
     pub password: String,
     pub email: String,
     pub about: String
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct Article {
+    pub id: String,
+    pub user_id: String,
+    pub title: String,
+    pub content: String,
+    pub status: String,
+    pub report_count: Option<i32>,
+    pub creation_date: NaiveDateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct InsertArticle {
+    pub title: String,
+    pub content: String,
+    pub status: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateArticleStatus {
+    pub id: String,
+    pub status: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct ReturnArticle {
+    pub id: String,
+    pub author: String,
+    pub title: String,
+    pub content: String,
+    pub status: String,
+    pub report_count: Option<i32>,
+    pub creation_date: NaiveDateTime
 }
