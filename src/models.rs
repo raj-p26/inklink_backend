@@ -61,6 +61,7 @@ pub struct Article {
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct InsertArticle {
+    pub user_id: String,
     pub title: String,
     pub content: String,
     pub status: Option<String>,

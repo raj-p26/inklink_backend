@@ -1,7 +1,7 @@
 use actix_web::{web, get, Responder, HttpResponse, post, put};
 use serde_json::json;
 
-use crate::{ db, jwt, models };
+use crate::{ db, models };
 use models::{ LoginUser, InsertUser, UpdateUser };
 use db::user_table_helper;
 
@@ -38,11 +38,8 @@ async fn root_handler() -> impl Responder {
 async fn new_user_handler(data: web::Json<InsertUser>) -> impl Responder {
     match user_table_helper::insert_user(data.into_inner()).await {
         Ok(user) => {
-            let token = jwt::create_token(&user.id, 64)
-                .expect("Error creating token");
             HttpResponse::Ok()
                 .json(json!({
-                    "token": token,
                     "status": "ok",
                     "user": user,
                 }))
@@ -79,11 +76,8 @@ async fn login_user_handler(data: web::Json<LoginUser>) -> impl Responder {
             user_table_helper::update_last_login_date(&user.email)
                 .await
                 .unwrap();
-            let token = jwt::create_token(&user.id, 64)
-                .expect("Error creating token");
             HttpResponse::Ok()
                 .json(json!({
-                    "token": token,
                     "status": "ok",
                     "user": user
                 }))

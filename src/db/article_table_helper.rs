@@ -12,14 +12,15 @@ use crate::models::{
 use crate::db::user_table_helper::get_user_by_id;
 
 
-pub async fn insert_article(article: InsertArticle, user_id: String) -> Result<PgQueryResult, String> {
+pub async fn insert_article(article: InsertArticle) -> Result<PgQueryResult, String> {
     let pool = establish_connection().await;
     let article_id = Uuid::new_v4().hyphenated().to_string();
 
-    if let Some(user) = get_user_by_id(user_id.clone()).await {
+    if let Some(user) = get_user_by_id(article.user_id.clone()).await {
         if user.account_status != "active" {
             return Err("User account is not active".to_string());
         }
+
     } else {
         return Err("User not found".to_string());
     }
@@ -28,12 +29,12 @@ pub async fn insert_article(article: InsertArticle, user_id: String) -> Result<P
         sqlx::query!(
             r#"INSERT INTO articles (id, user_id, title, content)
             VALUES ($1, $2, $3, $4)"#,
-            article_id, user_id, article.title, article.content)
+            article_id, article.user_id, article.title, article.content)
     } else {
         sqlx::query!(
             r#"INSERT INTO articles (id, user_id, title, content, status)
             VALUES ($1, $2, $3, $4, $5)"#,
-            article_id, user_id, article.title, article.content, article.status)
+            article_id, article.user_id, article.title, article.content, article.status)
     };
 
     let result = query.execute(&pool).await;
@@ -113,6 +114,7 @@ pub async fn get_latest_articles() -> Vec<ReturnArticle> {
         SELECT articles.id, username as author, title, content, status, report_count, creation_date
         FROM articles
         INNER JOIN users ON articles.user_id = users.id
+        WHERE status = 'published'
         ORDER BY creation_date DESC
         LIMIT 10
         "#)
@@ -154,6 +156,7 @@ pub async fn get_all_articles() -> Vec<ReturnArticle> {
         SELECT articles.id, username as author, title, content, status, report_count, creation_date
         FROM articles
         INNER JOIN users ON articles.user_id = users.id
+        WHERE status = 'published'
         ORDER BY creation_date;
         "#)
         .fetch_all(&pool)

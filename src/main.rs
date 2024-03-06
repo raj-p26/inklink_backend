@@ -7,8 +7,6 @@ use serde_json::json;
 use std::env;
 
 mod models;
-mod middleware;
-mod jwt;
 mod routes;
 mod db;
 
