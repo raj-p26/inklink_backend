@@ -34,18 +34,19 @@ pub struct LoginUser {
 pub struct SavedUser {
     pub id: String,
     pub username: String,
-    pub email: String
+    pub email: String,
+    pub last_login_date: NaiveDateTime
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateUser {
     pub id: String,
-    pub first_name: String,
-    pub last_name: String,
-    pub username: String,
-    pub password: String,
-    pub email: String,
-    pub about: String
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub email: Option<String>,
+    pub about: Option<String>
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -77,6 +78,7 @@ pub struct UpdateArticleStatus {
 pub struct ReturnArticle {
     pub id: String,
     pub author: String,
+    pub user_id: String,
     pub title: String,
     pub content: String,
     pub status: String,

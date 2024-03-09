@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
             .service(index)
             .wrap(Logger::default())
     })
-    .bind("192.168.113.215:4000")?
+    .bind("192.168.185.216:4000")?
         .run()
         .await?;
 

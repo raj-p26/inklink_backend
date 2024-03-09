@@ -1,4 +1,3 @@
-#![allow(unused)]
 use dotenv::dotenv;
 use uuid::Uuid;
 use std::env;
@@ -47,6 +46,7 @@ pub async fn insert_article(article: InsertArticle) -> Result<PgQueryResult, Str
     }
 }
 
+#[allow(dead_code)]
 pub async fn update_article_status(article: UpdateArticleStatus) -> Result<PgQueryResult, String> {
     let pool = establish_connection().await;
 
@@ -84,25 +84,39 @@ pub async fn get_article_by_id(id: String) -> Option<Article> {
     .ok()
 }
 
-pub async fn get_articles_by_user_id(user_id: String) -> Vec<Article> {
+#[allow(dead_code)]
+pub async fn get_articles_by_user_id(user_id: String, type_: String) -> Vec<ReturnArticle> {
     let pool = establish_connection().await;
 
-    let result = sqlx::query_as!(
-        Article,
-        r#"
-        SELECT id, user_id, title, content, status, report_count, creation_date
-        FROM articles
-        WHERE user_id = $1
-        "#,
-        user_id
-    )
-    .fetch_all(&pool)
-    .await
-    .expect("Error retrieving records from table");
-
-    pool.close().await;
-
-    return result;
+    if type_ == "all" {
+        return sqlx::query_as!(
+            ReturnArticle,
+            r#"
+            SELECT articles.id, username as author, title,
+            users.id as user_id, content, status, report_count, creation_date
+            FROM articles
+            INNER JOIN users ON articles.user_id = users.id
+            WHERE user_id = $1
+            "#, user_id)
+            .fetch_all(&pool)
+            .await
+            .expect("Error retrieving records from table");
+    } else {
+        return sqlx::query_as!(
+            ReturnArticle,
+            r#"
+            SELECT articles.id, username as author, title,
+            users.id as user_id, content, status, report_count, creation_date
+            FROM articles
+            INNER JOIN users ON articles.user_id = users.id
+            WHERE user_id = $1 AND status = $2
+            "#,
+            user_id, type_
+            )
+            .fetch_all(&pool)
+            .await
+            .expect("Error retrieving records from table");
+    }
 }
 
 pub async fn get_latest_articles() -> Vec<ReturnArticle> {
@@ -111,7 +125,8 @@ pub async fn get_latest_articles() -> Vec<ReturnArticle> {
     let result = sqlx::query_as!(
         ReturnArticle,
         r#"
-        SELECT articles.id, username as author, title, content, status, report_count, creation_date
+        SELECT articles.id, username as author, title,
+        users.id as user_id, content, status, report_count, creation_date
         FROM articles
         INNER JOIN users ON articles.user_id = users.id
         WHERE status = 'published'
@@ -127,13 +142,14 @@ pub async fn get_latest_articles() -> Vec<ReturnArticle> {
     result
 }
 
+#[allow(dead_code)]
 pub async fn get_article(article_id: String) -> Option<ReturnArticle> {
     let pool = establish_connection().await;
 
     let result = sqlx::query_as!(
         ReturnArticle,
         r#"SELECT articles.id, username as author, title, content,
-            status, report_count, creation_date
+            users.id as user_id, status, report_count, creation_date
             FROM articles
             INNER JOIN users ON articles.user_id = users.id
             WHERE articles.id = $1"#,
@@ -153,7 +169,8 @@ pub async fn get_all_articles() -> Vec<ReturnArticle> {
     let result = sqlx::query_as!(
         ReturnArticle,
         r#"
-        SELECT articles.id, username as author, title, content, status, report_count, creation_date
+        SELECT articles.id, username as author, title, content,
+        users.id as user_id, status, report_count, creation_date
         FROM articles
         INNER JOIN users ON articles.user_id = users.id
         WHERE status = 'published'
