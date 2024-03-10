@@ -56,7 +56,6 @@ pub struct Article {
     pub title: String,
     pub content: String,
     pub status: String,
-    pub report_count: Option<i32>,
     pub creation_date: NaiveDateTime,
 }
 
@@ -74,6 +73,14 @@ pub struct UpdateArticleStatus {
     pub status: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateArticle {
+    pub id: String,
+    pub title: Option<String>,
+    pub content: Option<String>,
+    pub status: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ReturnArticle {
     pub id: String,
@@ -82,6 +89,5 @@ pub struct ReturnArticle {
     pub title: String,
     pub content: String,
     pub status: String,
-    pub report_count: Option<i32>,
     pub creation_date: NaiveDateTime
 }

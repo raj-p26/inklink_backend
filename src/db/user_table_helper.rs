@@ -198,7 +198,7 @@ pub async fn get_latest_articles_by_user_id(id: String) -> Vec<ReturnArticle> {
         ReturnArticle,
         r#"
         SELECT articles.id, username as author, title,
-        users.id as user_id, content, status, report_count, creation_date
+        users.id as user_id, content, status, creation_date
         FROM articles
         INNER JOIN users ON articles.user_id = users.id
         WHERE user_id = $1

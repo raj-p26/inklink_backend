@@ -6,6 +6,5 @@ CREATE TABLE IF NOT EXISTS articles (
     content TEXT NOT NULL,
     status VARCHAR(20) DEFAULT 'draft' NOT NULL,
     creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    user_id VARCHAR(50) NOT NULL REFERENCES users(id),
-    report_count INT DEFAULT 0
+    user_id VARCHAR(50) NOT NULL REFERENCES users(id)
 );

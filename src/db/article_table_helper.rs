@@ -5,8 +5,7 @@ use sqlx::{ Pool, Postgres };
 use sqlx::postgres::PgQueryResult;
 
 use crate::models::{
-    Article, UpdateArticleStatus,
-    ReturnArticle, InsertArticle
+    Article, InsertArticle, ReturnArticle, UpdateArticle
 };
 use crate::db::user_table_helper::get_user_by_id;
 
@@ -46,20 +45,53 @@ pub async fn insert_article(article: InsertArticle) -> Result<PgQueryResult, Str
     }
 }
 
-#[allow(dead_code)]
-pub async fn update_article_status(article: UpdateArticleStatus) -> Result<PgQueryResult, String> {
+pub async fn update_article(article: UpdateArticle) -> Result<PgQueryResult, String> {
     let pool = establish_connection().await;
 
     if let None = get_article_by_id(article.id.clone()).await {
         return Err("Article not found".to_string());
     }
 
-    let result = sqlx::query!(
-        r#"UPDATE articles SET status = $1 WHERE id = $2"#,
-        article.status, article.id
-    )
-    .execute(&pool)
-    .await;
+    let mut params: Vec<String> = Vec::new();
+    let mut params_index = 1;
+    let mut query = String::from("UPDATE articles SET");
+
+    if let Some(title) = article.title {
+        query.push_str(format!(" title = ${}", params_index).as_str());
+        params_index += 1;
+        query.push_str(",");
+        params.push(title);
+    }
+
+    if let Some(content) = article.content {
+        query.push_str(format!(" content = ${}", params_index).as_str());
+        params_index += 1;
+        query.push_str(",");
+        params.push(content);
+    }
+
+    if let Some(status) = article.status {
+        query.push_str(format!(" status = ${}", params_index).as_str());
+        params_index += 1;
+        query.push_str(",");
+        params.push(status);
+    }
+
+    query.pop();
+    query.push_str(format!(" WHERE id = ${};", params_index).as_str());
+    params.push(article.id);
+    println!("{}", query);
+    println!("{:?}", params);
+
+    let mut sql = sqlx::query(&query);
+
+    for param in params {
+        sql = sql.bind(param);
+    }
+
+    let result = sql
+        .execute(&pool)
+        .await;
 
     match result {
         Ok(res) => Ok(res),
@@ -73,7 +105,7 @@ pub async fn get_article_by_id(id: String) -> Option<Article> {
     sqlx::query_as!(
         Article,
         r#"
-        SELECT id, user_id, title, content, status, report_count, creation_date
+        SELECT id, user_id, title, content, status, creation_date
         FROM articles
         WHERE id = $1
         "#,
@@ -84,7 +116,40 @@ pub async fn get_article_by_id(id: String) -> Option<Article> {
     .ok()
 }
 
-#[allow(dead_code)]
+pub async fn delete_article(id: String, user_id: String) -> Result<PgQueryResult, String> {
+    let pool = establish_connection().await;
+    let article = get_article_by_id(id.clone()).await;
+
+    if article.is_none() {
+        return Err("Article not found".to_string());
+    }
+
+    let article = article.unwrap();
+
+    if article.user_id != user_id {
+        return Err("Unauthorized".to_string());
+    }
+
+    if article.status == "published" {
+        return Err("Cannot delete published article".to_string());
+    }
+
+    let result = sqlx::query!(
+        r#"DELETE FROM articles WHERE id = $1"#,
+        id
+    )
+    .execute(&pool)
+    .await;
+    println!("{:?}", result);
+
+    pool.close().await;
+
+    match result {
+        Ok(res) => Ok(res),
+        Err(e) => Err(e.to_string())
+    }
+}
+
 pub async fn get_articles_by_user_id(user_id: String, type_: String) -> Vec<ReturnArticle> {
     let pool = establish_connection().await;
 
@@ -93,7 +158,7 @@ pub async fn get_articles_by_user_id(user_id: String, type_: String) -> Vec<Retu
             ReturnArticle,
             r#"
             SELECT articles.id, username as author, title,
-            users.id as user_id, content, status, report_count, creation_date
+            users.id as user_id, content, status, creation_date
             FROM articles
             INNER JOIN users ON articles.user_id = users.id
             WHERE user_id = $1
@@ -106,7 +171,7 @@ pub async fn get_articles_by_user_id(user_id: String, type_: String) -> Vec<Retu
             ReturnArticle,
             r#"
             SELECT articles.id, username as author, title,
-            users.id as user_id, content, status, report_count, creation_date
+            users.id as user_id, content, status, creation_date
             FROM articles
             INNER JOIN users ON articles.user_id = users.id
             WHERE user_id = $1 AND status = $2
@@ -126,7 +191,7 @@ pub async fn get_latest_articles() -> Vec<ReturnArticle> {
         ReturnArticle,
         r#"
         SELECT articles.id, username as author, title,
-        users.id as user_id, content, status, report_count, creation_date
+        users.id as user_id, content, status, creation_date
         FROM articles
         INNER JOIN users ON articles.user_id = users.id
         WHERE status = 'published'
@@ -149,7 +214,7 @@ pub async fn get_article(article_id: String) -> Option<ReturnArticle> {
     let result = sqlx::query_as!(
         ReturnArticle,
         r#"SELECT articles.id, username as author, title, content,
-            users.id as user_id, status, report_count, creation_date
+            users.id as user_id, status, creation_date
             FROM articles
             INNER JOIN users ON articles.user_id = users.id
             WHERE articles.id = $1"#,
@@ -170,7 +235,7 @@ pub async fn get_all_articles() -> Vec<ReturnArticle> {
         ReturnArticle,
         r#"
         SELECT articles.id, username as author, title, content,
-        users.id as user_id, status, report_count, creation_date
+        users.id as user_id, status, creation_date
         FROM articles
         INNER JOIN users ON articles.user_id = users.id
         WHERE status = 'published'
